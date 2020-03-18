@@ -1,19 +1,32 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const app = express();
 const db = require('./models');
+const app = express();
 
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
 
 app.post('/add-artist', async (req, res) => {
-  const newArtist = await db.address.create();
-  res.status(201).send(newArtist);
-});
+  const newAddress = await db.address.create({ addr: req.body.addr });
+  const newArtist = await db.artist.create({
+    name: req.body.name,
+    phoneNumber: req.body.phoneNumber,
+    addressId: newAddress.id // ได้มาจากการ create new address
+  });
 
-app.get('/artists', async (req, res) => {
-  const artists = await db.artist.findAll({ include: [db.song] });
-  res.status(200).send(artists);
+  const newAlbum = await db.album.create({
+    name: req.body.album.name,
+    releaseDate: req.body.album.releaseDate,
+    artistId: newArtist.id // ได้มาจากการ create new artist
+  });
+
+  const newSong = await db.song.create({
+    name: req.body.song.name,
+    artistId: newArtist.id, // ได้มาจากการ create new artist
+    albumId: newAlbum.id // ได้มาจากการ create new album
+  });
+
+  res.status(201).send({ newAddress, newArtist, newAlbum, newSong });
 });
 
 db.sequelize.sync().then(() => {
